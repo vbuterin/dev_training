@@ -1,0 +1,84 @@
+<script src="web3.min.js"></script>
+<script>
+var web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
+var eth = web3.eth;
+</script>
+
+<script>
+setInterval(function() {
+    web3.eth.getBalance(web3.eth.accounts[4], function(err, res) {
+        document.getElementById("balance").innerText = ""+res;
+    });
+    if (window.crowdfund && window.crowdfund.address) {
+        document.getElementById("campaign_address").innerHTML = window.crowdfund.address;
+        window.crowdfund.deadline(function(err, res) {
+            document.getElementById("time_remaining").innerHTML =
+                ""+(res - new Date().getTime() * 0.001);
+        });
+    }
+    else if (window.crowdfund) {
+        document.getElementById("campaign_address").innerHTML = "Waiting for address";
+    }
+    else {
+        document.getElementById("campaign_address").innerHTML = "Not created a campaign yet";
+    }
+}, 1000);
+
+function clicky() {
+    console.log(123);
+    web3.eth.sendTransaction({from: web3.eth.accounts[4], to: web3.eth.accounts[3], value: web3.toWei(0.01)}, function(err, res) {
+        if (err) alert(err);
+        else alert(res);
+    });
+}
+
+var crowdfundContract = web3.eth.contract([{"constant":true,"inputs":[],"name":"deadline","outputs":[{"name":"","type":"uint256"}],"type":"function"},{"constant":false,"inputs":[],"name":"refund","outputs":[],"type":"function"},{"constant":false,"inputs":[],"name":"fund","outputs":[],"type":"function"},{"constant":false,"inputs":[],"name":"collect","outputs":[],"type":"function"},{"inputs":[{"name":"_beneficiary","type":"address"},{"name":"_goal","type":"uint256"},{"name":"_timelimit","type":"uint256"}],"type":"constructor"}]);
+
+function launchCrowdfund() {
+    var _beneficiary = document.getElementById("beneficiary").value;
+    var _goal = web3.toWei(parseFloat(document.getElementById("goal").value));
+    var _timelimit = parseInt(document.getElementById("timelimit").value);
+    console.log(_beneficiary, _goal, _timelimit);
+    var crowdfund = crowdfundContract.new(
+       _beneficiary,
+       _goal,
+       _timelimit,
+       {
+         from: web3.eth.accounts[4], 
+         data: '0x6060604052604051606080610402833981016040528080519060200190919080519060200190919080519060200190919050505b82600360006101000a81548173ffffffffffffffffffffffffffffffffffffffff02191690830217905550816001600050819055508042016002600050819055505b50505061037c806100866000396000f360606040526000357c01000000000000000000000000000000000000000000000000000000009004806329dcb0cf1461005a578063590e1ae31461007d578063b60d42881461008c578063e52253811461009b57610058565b005b61006760048050506100aa565b6040518082815260200191505060405180910390f35b61008a60048050506100b3565b005b61009960048050506101ca565b005b6100a860048050506102d7565b005b60026000505481565b6000600260005054421180156100e457506001600050543073ffffffffffffffffffffffffffffffffffffffff1631105b156101c65760046000505490505b6000600050805490508110801561010b575062030d405a115b156101bb57600060005081815481101561000257906000526020600020906002020160005b5060000160009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff166000600060005083815481101561000257906000526020600020906002020160005b5060010160005054604051809050600060405180830381858888f193505050505080806001019150506100f2565b806004600050819055505b5b50565b6002600050544211156101dc57610002565b6000600050805480600101828181548183558181151161025f5760020281600202836000526020600020918201910161025e9190610215565b8082111561025a5760006000820160006101000a81549073ffffffffffffffffffffffffffffffffffffffff0219169055600182016000506000905550600201610215565b5090565b5b5050509190906000526020600020906002020160005b60406040519081016040528033815260200134815260200150909190915060008201518160000160006101000a81548173ffffffffffffffffffffffffffffffffffffffff02191690830217905550602082015181600101600050555050505b565b6002600050544211801561030757506001600050543073ffffffffffffffffffffffffffffffffffffffff163110155b1561037957600360009054906101000a900473ffffffffffffffffffffffffffffffffffffffff1673ffffffffffffffffffffffffffffffffffffffff1660003073ffffffffffffffffffffffffffffffffffffffff1631604051809050600060405180830381858888f19350505050505b5b56', 
+         gas: 2700000
+       }, function (e, contract){
+        if (e) console.log(e);
+        else {
+            console.log('success (for now)');
+            window.crowdfund = contract;
+        }
+     })
+}
+
+function contribute() {
+    if (!window.crowdfund || !window.crowdfund.address) {
+        alert("No campaign found!!!1!");
+        throw("No campaign found!!!1!");
+    }
+    window.crowdfund.fund({from: web3.eth.accounts[4],
+        value: web3.toWei(parseFloat(document.getElementById("amount").value))},
+        function(err, res) {
+            if (err) console.log(err);  
+            else console.log('success (still for now)');
+        })
+}
+</script>
+    
+My wei balance: <span id="balance"></span>
+<br>
+Beneficiary: <input id="beneficiary"></input><br>
+Goal: <input id="goal"></input><br>
+Time limit: <input id="timelimit"></input><br>
+<button onclick="launchCrowdfund()">Create!</button><br>
+Campaign address: <span id="campaign_address"></span>
+<br>
+Time remaining: <span id="time_remaining"></span>
+<br>
+Amount: <input id="amount"></input><br>
+<button onclick="contribute()">Contribute!</button><br>
